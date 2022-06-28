@@ -1,40 +1,94 @@
-import gi
+from __future__ import annotations
+from enum import Enum
 import signal
 
+import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('GtkLayerShell', '0.1')
-
 from gi.repository import Gio, GLib, Gtk, GtkLayerShell
 
+class BarPosition(Enum):
+    TOP = "top",
+    BOTTOM = "bottom",
+    LEFT = "left",
+    RIGHT = "right",
+
+    @classmethod
+    def from_str(cls, str: str) -> BarPosition:
+        key = str.upper()
+        for val in BarPosition:
+            if key == val.name:
+                return val
+
+        raise ValueError(
+            "'{}' is not a valid BarPosition, "
+            "must be top, bottom, left, or right".format(str)
+        )
+
+class Configuration:
+    position: BarPosition
+
+    def __init__(self):
+        self.position = BarPosition.TOP
+
+    @property
+    def orientation(self) -> Gtk.Orientation:
+        if self.position in [BarPosition.TOP, BarPosition.BOTTOM]:
+            return Gtk.Orientation.HORIZONTAL
+        return Gtk.Orientation.VERTICAL
+
 class Application(Gtk.Application):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
+        flags = Gio.ApplicationFlags.NON_UNIQUE \
+              | Gio.ApplicationFlags.HANDLES_COMMAND_LINE
+
         super().__init__(
             *args,
             application_id="dev.swiger.Cinnabar",
-            flags=Gio.ApplicationFlags.NON_UNIQUE,
+            flags=flags,
             **kwargs,
         )
+
+        self.config = Configuration()
+
+        self.add_main_option(
+            "position",
+            ord("p"),
+            GLib.OptionFlags.NONE,
+            GLib.OptionArg.STRING,
+            "Position of the bar on the display (top, bottom, left, right)",
+            None,
+        )
+
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, self.quit)
     
-    def do_startup(self):
+    def do_startup(self) -> None:
         Gtk.Application.do_startup(self)
 
-    def do_activate(self):
-        orientation = Gtk.Orientation.HORIZONTAL
+    def do_command_line(self, command_line: Gio.ApplicationCommandLine) -> int:
+        options = command_line.get_options_dict()
+        options = options.end().unpack()
 
-        beginning_box = Gtk.Box(orientation=orientation, spacing=0)
+        if "position" in options:
+            self.config.position = BarPosition.from_str(options["position"])
+
+        self.activate()
+        return 0
+
+    def do_activate(self) -> None:
+        beginning_box = Gtk.Box(orientation=self.config.orientation, spacing=0)
         beginning_box.set_halign(Gtk.Align.START)
         beginning_box.set_valign(Gtk.Align.START)
 
-        middle_box = Gtk.Box(orientation=orientation, spacing=0)
+        middle_box = Gtk.Box(orientation=self.config.orientation, spacing=0)
         middle_box.set_halign(Gtk.Align.CENTER)
         middle_box.set_valign(Gtk.Align.CENTER)
 
-        end_box = Gtk.Box(orientation=orientation, spacing=0)
+        end_box = Gtk.Box(orientation=self.config.orientation, spacing=0)
         end_box.set_halign(Gtk.Align.END)
         end_box.set_valign(Gtk.Align.END)
         
-        main_box = Gtk.Box(orientation=orientation, spacing=0)
+        main_box = Gtk.Box(orientation=self.config.orientation, spacing=0)
         main_box.set_homogeneous(True)
         main_box.add(beginning_box)
         main_box.add(middle_box)
@@ -48,14 +102,31 @@ class Application(Gtk.Application):
         middle_box.add(label3)
         end_box.add(label2)
 
-        window = Gtk.Window(application=self, decorated=False)
-        window.connect("destroy", Gtk.main_quit)
-        window.add(main_box)
+        self.window = Gtk.Window(application=self, decorated=False)
+        self.window.connect("destroy", Gtk.main_quit)
+        self.window.add(main_box)
 
-        GtkLayerShell.init_for_window(window)
-        GtkLayerShell.auto_exclusive_zone_enable(window)
-        GtkLayerShell.set_anchor(window, GtkLayerShell.Edge.BOTTOM, True)
-        GtkLayerShell.set_anchor(window, GtkLayerShell.Edge.LEFT, True)
-        GtkLayerShell.set_anchor(window, GtkLayerShell.Edge.RIGHT, True)
+        GtkLayerShell.init_for_window(self.window)
+        GtkLayerShell.auto_exclusive_zone_enable(self.window)
+        self.update_anchors()
         
-        window.show_all()
+        self.window.show_all()
+
+    def update_anchors(self):
+        match self.config.position:
+            case BarPosition.TOP:
+                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.TOP, True)
+                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.LEFT, True)
+                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.RIGHT, True)
+            case BarPosition.BOTTOM:
+                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.BOTTOM, True)
+                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.LEFT, True)
+                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.RIGHT, True)
+            case BarPosition.LEFT:
+                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.TOP, True)
+                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.BOTTOM, True)
+                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.LEFT, True)
+            case BarPosition.RIGHT:
+                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.TOP, True)
+                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.BOTTOM, True)
+                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.RIGHT, True)
