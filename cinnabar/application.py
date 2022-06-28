@@ -1,21 +1,18 @@
 from __future__ import annotations
 from enum import Enum
+from gi.repository import Gio, GLib, Gtk, GtkLayerShell
 import signal
 
-import gi
-gi.require_version("Gtk", "3.0")
-gi.require_version("GtkLayerShell", "0.1")
-from gi.repository import Gio, GLib, Gtk, GtkLayerShell
 
 class BarPosition(Enum):
-    TOP = "top",
-    BOTTOM = "bottom",
-    LEFT = "left",
-    RIGHT = "right",
+    TOP = "top"
+    BOTTOM = "bottom"
+    LEFT = "left"
+    RIGHT = "right"
 
     @classmethod
-    def from_str(cls, str: str) -> BarPosition:
-        key = str.upper()
+    def from_str(cls, string: str) -> BarPosition:
+        key = string.upper()
         for val in BarPosition:
             if key == val.name:
                 return val
@@ -24,6 +21,7 @@ class BarPosition(Enum):
             "'{}' is not a valid BarPosition, "
             "must be top, bottom, left, or right".format(str)
         )
+
 
 class Configuration:
     position: BarPosition
@@ -36,6 +34,7 @@ class Configuration:
         if self.position in [BarPosition.TOP, BarPosition.BOTTOM]:
             return Gtk.Orientation.HORIZONTAL
         return Gtk.Orientation.VERTICAL
+
 
 class Application(Gtk.Application):
     def __init__(self, *args, **kwargs) -> None:
@@ -61,7 +60,7 @@ class Application(Gtk.Application):
         )
 
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, self.quit)
-    
+
     def do_startup(self) -> None:
         Gtk.Application.do_startup(self)
 
@@ -87,7 +86,7 @@ class Application(Gtk.Application):
         end_box = Gtk.Box(orientation=self.config.orientation, spacing=0)
         end_box.set_halign(Gtk.Align.END)
         end_box.set_valign(Gtk.Align.END)
-        
+
         main_box = Gtk.Box(orientation=self.config.orientation, spacing=0)
         main_box.set_homogeneous(True)
         main_box.add(beginning_box)
@@ -109,24 +108,37 @@ class Application(Gtk.Application):
         GtkLayerShell.init_for_window(self.window)
         GtkLayerShell.auto_exclusive_zone_enable(self.window)
         self.update_anchors()
-        
+
         self.window.show_all()
 
     def update_anchors(self):
+        edges = []
+
         match self.config.position:
             case BarPosition.TOP:
-                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.TOP, True)
-                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.LEFT, True)
-                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.RIGHT, True)
+                edges = [
+                    GtkLayerShell.Edge.TOP,
+                    GtkLayerShell.Edge.LEFT,
+                    GtkLayerShell.Edge.RIGHT,
+                ]
             case BarPosition.BOTTOM:
-                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.BOTTOM, True)
-                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.LEFT, True)
-                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.RIGHT, True)
+                edges = [
+                    GtkLayerShell.Edge.BOTTOM,
+                    GtkLayerShell.Edge.LEFT,
+                    GtkLayerShell.Edge.RIGHT,
+                ]
             case BarPosition.LEFT:
-                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.TOP, True)
-                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.BOTTOM, True)
-                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.LEFT, True)
+                edges = [
+                    GtkLayerShell.Edge.TOP,
+                    GtkLayerShell.Edge.BOTTOM,
+                    GtkLayerShell.Edge.LEFT,
+                ]
             case BarPosition.RIGHT:
-                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.TOP, True)
-                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.BOTTOM, True)
-                GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.RIGHT, True)
+                edges = [
+                    GtkLayerShell.Edge.TOP,
+                    GtkLayerShell.Edge.BOTTOM,
+                    GtkLayerShell.Edge.RIGHT,
+                ]
+
+        for edge in edges:
+            GtkLayerShell.set_anchor(self.window, edge, True)
