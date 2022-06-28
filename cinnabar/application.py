@@ -14,7 +14,6 @@ class Application(Gtk.Application):
             flags=Gio.ApplicationFlags.NON_UNIQUE,
             **kwargs,
         )
-        self.window = None
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, self.quit)
     
     def do_startup(self):
@@ -49,15 +48,14 @@ class Application(Gtk.Application):
         middle_box.add(label3)
         end_box.add(label2)
 
-        if not self.window:
-            self.window = Gtk.Window(application=self, decorated=False)
-            self.window.connect("destroy", Gtk.main_quit)
-            self.window.add(main_box)
+        window = Gtk.Window(application=self, decorated=False)
+        window.connect("destroy", Gtk.main_quit)
+        window.add(main_box)
 
-        GtkLayerShell.init_for_window(self.window)
-        GtkLayerShell.auto_exclusive_zone_enable(self.window)
-        GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.BOTTOM, True)
-        GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.LEFT, True)
-        GtkLayerShell.set_anchor(self.window, GtkLayerShell.Edge.RIGHT, True)
+        GtkLayerShell.init_for_window(window)
+        GtkLayerShell.auto_exclusive_zone_enable(window)
+        GtkLayerShell.set_anchor(window, GtkLayerShell.Edge.BOTTOM, True)
+        GtkLayerShell.set_anchor(window, GtkLayerShell.Edge.LEFT, True)
+        GtkLayerShell.set_anchor(window, GtkLayerShell.Edge.RIGHT, True)
         
-        self.window.show_all()
+        window.show_all()
