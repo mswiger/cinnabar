@@ -3,8 +3,8 @@ from enum import Enum
 import signal
 
 import gi
-gi.require_version('Gtk', '3.0')
-gi.require_version('GtkLayerShell', '0.1')
+gi.require_version("Gtk", "3.0")
+gi.require_version("GtkLayerShell", "0.1")
 from gi.repository import Gio, GLib, Gtk, GtkLayerShell
 
 class BarPosition(Enum):
@@ -95,9 +95,9 @@ class Application(Gtk.Application):
         main_box.add(end_box)
 
         # TODO: delete
-        label = Gtk.Label(label='GTK Layer Shell with Python!')
-        label3 = Gtk.Label(label='this here is the middle')
-        label2 = Gtk.Label(label='pizza pizza pizza')
+        label = Gtk.Label(label="GTK Layer Shell with Python!")
+        label3 = Gtk.Label(label="this here is the middle")
+        label2 = Gtk.Label(label="pizza pizza pizza")
         beginning_box.add(label)
         middle_box.add(label3)
         end_box.add(label2)
