@@ -1,0 +1,12 @@
+[[modules.beginning]]
+type = "cinnabar.modules.dummy"
+id = "left-dummy"
+
+[[modules.end]]
+type = "cinnabar.modules.dummy"
+id = "right-dummy"
+
+# Can use "array of objects" syntax!
+[[modules.end]]
+type = "cinnabar.modules.dummy"
+id = "right-dummy2"

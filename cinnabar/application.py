@@ -1,7 +1,11 @@
 from __future__ import annotations
+from cinnabar.module import Module
 from enum import Enum
 from gi.repository import Gio, GLib, Gtk, GtkLayerShell
+import importlib
+import inspect
 import signal
+import tomli
 
 
 class BarPosition(Enum):
@@ -56,10 +60,18 @@ class Application(Gtk.Application):
             GLib.OptionFlags.NONE,
             GLib.OptionArg.STRING,
             "Position of the bar on the display (top, bottom, left, right)",
-            None,
+        )
+
+        self.add_main_option(
+            "config",
+            ord("c"),
+            GLib.OptionFlags.NONE,
+            GLib.OptionArg.STRING,
+            "Config file to use",
         )
 
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, self.quit)
+        self.modules_beginning = []
 
     def do_startup(self) -> None:
         Gtk.Application.do_startup(self)
@@ -70,9 +82,31 @@ class Application(Gtk.Application):
 
         if "position" in options:
             self.config.position = BarPosition.from_str(options["position"])
-
+        if "config" in options:
+            with open(options["config"], "rb") as f:
+                cfg = tomli.load(f)
+                module_cfg = cfg.get("modules", {})
+                self.modules_beginning = self.load_module_list(
+                    module_cfg.get("beginning", [])
+                )
+                self.modules_middle = self.load_module_list(
+                    module_cfg.get("middle", [])
+                )
+                self.modules_end = self.load_module_list(
+                    module_cfg.get("end", [])
+                )
         self.activate()
         return 0
+
+    def load_module_list(self, module_configs: list[dict]) -> list[Module]:
+        modules: list[Module] = []
+        for module_config in module_configs:
+            py_module = importlib.import_module(module_config["type"])
+            classes = inspect.getmembers(py_module, inspect.isclass)
+            for (_, c) in classes:
+                if issubclass(c, Module) and (c is not Module):
+                    modules.append(c({}))
+        return modules
 
     def do_activate(self) -> None:
         beginning_box = Gtk.Box(orientation=self.config.orientation, spacing=0)
@@ -93,13 +127,14 @@ class Application(Gtk.Application):
         main_box.add(middle_box)
         main_box.add(end_box)
 
-        # TODO: delete
-        label = Gtk.Label(label="GTK Layer Shell with Python!")
-        label3 = Gtk.Label(label="this here is the middle")
-        label2 = Gtk.Label(label="pizza pizza pizza")
-        beginning_box.add(label)
-        middle_box.add(label3)
-        end_box.add(label2)
+        for module in self.modules_beginning:
+            beginning_box.add(module.widget())
+
+        for module in self.modules_middle:
+            middle_box.add(module.widget())
+
+        for module in self.modules_end:
+            end_box.add(module.widget())
 
         self.window = Gtk.Window(application=self, decorated=False)
         self.window.connect("destroy", Gtk.main_quit)
