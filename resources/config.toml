@@ -2,6 +2,11 @@
 type = "cinnabar.modules.dummy"
 id = "left-dummy"
 
+[[modules.middle]]
+type = "cinnabar.modules.clock"
+id = "clock"
+format = "{:%Y-%m-%d %H:%M:%S}"
+
 [[modules.end]]
 type = "cinnabar.modules.dummy"
 id = "right-dummy"

@@ -104,13 +104,14 @@ class Application(Gtk.Application):
         return 0
 
     def load_module_list(self, module_configs: list[dict]) -> list[Module]:
+        # TODO: Should namespace package be used for Cinnabar modules?
         modules: list[Module] = []
         for module_config in module_configs:
             py_module = importlib.import_module(module_config["type"])
             classes = inspect.getmembers(py_module, inspect.isclass)
             for (_, c) in classes:
                 if issubclass(c, Module) and (c is not Module):
-                    modules.append(c({}))
+                    modules.append(c(module_config))
         return modules
 
     def do_activate(self) -> None:
