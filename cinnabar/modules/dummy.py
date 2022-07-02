@@ -1,6 +1,7 @@
+from gi.repository import Gtk
+
 from cinnabar.application import Configuration
 from cinnabar.module import Module
-from gi.repository import Gtk
 
 
 class DummyModule(Module):

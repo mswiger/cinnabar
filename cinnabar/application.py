@@ -1,11 +1,14 @@
 from __future__ import annotations
-from cinnabar.module import Module
-from enum import Enum
-from gi.repository import Gio, GLib, Gtk, GtkLayerShell
+
 import importlib
 import inspect
 import signal
+from enum import Enum
+
 import tomli
+from gi.repository import Gio, GLib, Gtk, GtkLayerShell
+
+from cinnabar.module import Module
 
 
 class BarPosition(Enum):
@@ -42,8 +45,10 @@ class Configuration:
 
 class Application(Gtk.Application):
     def __init__(self, *args, **kwargs) -> None:
-        flags = Gio.ApplicationFlags.NON_UNIQUE \
-              | Gio.ApplicationFlags.HANDLES_COMMAND_LINE
+        flags = (
+            Gio.ApplicationFlags.NON_UNIQUE
+            | Gio.ApplicationFlags.HANDLES_COMMAND_LINE
+        )
 
         super().__init__(
             *args,

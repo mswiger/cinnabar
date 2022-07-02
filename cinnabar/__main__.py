@@ -1,5 +1,6 @@
-from cinnabar.application import Application
 import sys
+
+from cinnabar.application import Application
 
 
 app = Application()
