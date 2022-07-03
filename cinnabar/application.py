@@ -31,8 +31,6 @@ class BarPosition(Enum):
 
 
 class Configuration:
-    position: BarPosition
-
     def __init__(self):
         self.position = BarPosition.TOP
 
