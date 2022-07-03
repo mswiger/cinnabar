@@ -74,7 +74,7 @@ class Application(Gtk.Application):
         )
 
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, self.quit)
-        self.modules_beginning = []
+        self._modules_beginning = []
 
     def do_startup(self) -> None:
         Gtk.Application.do_startup(self)
@@ -89,13 +89,13 @@ class Application(Gtk.Application):
             with open(options["config"], "rb") as f:
                 cfg = tomli.load(f)
                 module_cfg = cfg.get("modules", {})
-                self.modules_beginning = self.load_module_list(
+                self._modules_beginning = self.load_module_list(
                     module_cfg.get("beginning", [])
                 )
-                self.modules_middle = self.load_module_list(
+                self._modules_middle = self.load_module_list(
                     module_cfg.get("middle", [])
                 )
-                self.modules_end = self.load_module_list(
+                self._modules_end = self.load_module_list(
                     module_cfg.get("end", [])
                 )
         self.activate()
@@ -131,24 +131,24 @@ class Application(Gtk.Application):
         main_box.add(middle_box)
         main_box.add(end_box)
 
-        for module in self.modules_beginning:
+        for module in self._modules_beginning:
             beginning_box.add(module.widget())
 
-        for module in self.modules_middle:
+        for module in self._modules_middle:
             middle_box.add(module.widget())
 
-        for module in self.modules_end:
+        for module in self._modules_end:
             end_box.add(module.widget())
 
-        self.window = Gtk.Window(application=self, decorated=False)
-        self.window.connect("destroy", Gtk.main_quit)
-        self.window.add(main_box)
+        self._window = Gtk.Window(application=self, decorated=False)
+        self._window.connect("destroy", Gtk.main_quit)
+        self._window.add(main_box)
 
-        GtkLayerShell.init_for_window(self.window)
-        GtkLayerShell.auto_exclusive_zone_enable(self.window)
+        GtkLayerShell.init_for_window(self._window)
+        GtkLayerShell.auto_exclusive_zone_enable(self._window)
         self.update_anchors()
 
-        self.window.show_all()
+        self._window.show_all()
 
     def update_anchors(self):
         edges = []
@@ -180,4 +180,4 @@ class Application(Gtk.Application):
                 ]
 
         for edge in edges:
-            GtkLayerShell.set_anchor(self.window, edge, True)
+            GtkLayerShell.set_anchor(self._window, edge, True)
