@@ -1,10 +1,10 @@
 from gi.repository import Gtk
 
 from cinnabar.application import Configuration
-from cinnabar.module import Module
+from cinnabar.plugin import WidgetPlugin
 
 
-class DummyModule(Module):
+class DummyModule(WidgetPlugin):
     def __init__(self, config: Configuration):
         return
 

@@ -1,17 +1,12 @@
-[[modules.beginning]]
-type = "cinnabar.modules.dummy"
-id = "left-dummy"
+[[widgets.beginning]]
+type = "cinnabar.plugins.dummy"
 
-[[modules.middle]]
-type = "cinnabar.modules.clock"
-id = "clock"
+[[widgets.middle]]
+type = "cinnabar.plugins.clock"
 format = "{:%Y-%m-%d %H:%M:%S}"
 
-[[modules.end]]
-type = "cinnabar.modules.dummy"
-id = "right-dummy"
+[[widgets.end]]
+type = "cinnabar.plugins.dummy"
 
-# Can use "array of objects" syntax!
-[[modules.end]]
-type = "cinnabar.modules.dummy"
-id = "right-dummy2"
+[[widgets.end]]
+type = "cinnabar.plugins.dummy"

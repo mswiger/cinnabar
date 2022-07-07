@@ -8,7 +8,7 @@ from enum import Enum
 import tomli
 from gi.repository import Gio, GLib, Gtk, GtkLayerShell
 
-from cinnabar.module import Module
+from cinnabar.plugin import WidgetPlugin
 
 
 class BarPosition(Enum):
@@ -74,7 +74,7 @@ class Application(Gtk.Application):
         )
 
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, self.quit)
-        self._modules_beginning = []
+        self._begin_widgets = []
 
     def do_startup(self) -> None:
         Gtk.Application.do_startup(self)
@@ -88,29 +88,28 @@ class Application(Gtk.Application):
         if "config" in options:
             with open(options["config"], "rb") as f:
                 cfg = tomli.load(f)
-                module_cfg = cfg.get("modules", {})
-                self._modules_beginning = self.load_module_list(
-                    module_cfg.get("beginning", [])
+                widget_cfg = cfg.get("widgets", {})
+                self._begin_widgets = self.load_widgets(
+                    widget_cfg.get("beginning", [])
                 )
-                self._modules_middle = self.load_module_list(
-                    module_cfg.get("middle", [])
+                self._mid_widgets = self.load_widgets(
+                    widget_cfg.get("middle", [])
                 )
-                self._modules_end = self.load_module_list(
-                    module_cfg.get("end", [])
+                self._end_widgets = self.load_widgets(
+                    widget_cfg.get("end", [])
                 )
         self.activate()
         return 0
 
-    def load_module_list(self, module_configs: list[dict]) -> list[Module]:
-        # TODO: Should namespace package be used for Cinnabar modules?
-        modules: list[Module] = []
-        for module_config in module_configs:
-            py_module = importlib.import_module(module_config["type"])
-            classes = inspect.getmembers(py_module, inspect.isclass)
+    def load_widgets(self, configs: list[dict]) -> list[WidgetPlugin]:
+        widgets: list[WidgetPlugin] = []
+        for config in configs:
+            module = importlib.import_module(config["type"])
+            classes = inspect.getmembers(module, inspect.isclass)
             for (_, c) in classes:
-                if issubclass(c, Module) and (c is not Module):
-                    modules.append(c(module_config))
-        return modules
+                if issubclass(c, WidgetPlugin) and (c is not WidgetPlugin):
+                    widgets.append(c(config))
+        return widgets
 
     def do_activate(self) -> None:
         beginning_box = Gtk.Box(orientation=self.config.orientation, spacing=0)
@@ -131,14 +130,14 @@ class Application(Gtk.Application):
         main_box.add(middle_box)
         main_box.add(end_box)
 
-        for module in self._modules_beginning:
-            beginning_box.add(module.widget())
+        for widget in self._begin_widgets:
+            beginning_box.add(widget.widget())
 
-        for module in self._modules_middle:
-            middle_box.add(module.widget())
+        for widget in self._mid_widgets:
+            middle_box.add(widget.widget())
 
-        for module in self._modules_end:
-            end_box.add(module.widget())
+        for widget in self._end_widgets:
+            end_box.add(widget.widget())
 
         self._window = Gtk.Window(application=self, decorated=False)
         self._window.connect("destroy", Gtk.main_quit)
