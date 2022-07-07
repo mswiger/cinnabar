@@ -1,12 +1,12 @@
 [[widgets.beginning]]
-type = "cinnabar.plugins.dummy"
+type = "dummy"
 
 [[widgets.middle]]
-type = "cinnabar.plugins.clock"
+type = "clock"
 format = "{:%Y-%m-%d %H:%M:%S}"
 
 [[widgets.end]]
-type = "cinnabar.plugins.dummy"
+type = "dummy"
 
 [[widgets.end]]
-type = "cinnabar.plugins.dummy"
+type = "dummy"

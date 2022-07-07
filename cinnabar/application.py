@@ -104,7 +104,8 @@ class Application(Gtk.Application):
     def load_widgets(self, configs: list[dict]) -> list[WidgetPlugin]:
         widgets: list[WidgetPlugin] = []
         for config in configs:
-            module = importlib.import_module(config["type"])
+            plugin_module_path = "cinnabar.plugins." + config["type"]
+            module = importlib.import_module(plugin_module_path)
             classes = inspect.getmembers(module, inspect.isclass)
             for (_, c) in classes:
                 if issubclass(c, WidgetPlugin) and (c is not WidgetPlugin):
