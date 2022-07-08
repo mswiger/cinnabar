@@ -5,7 +5,7 @@ import inspect
 import signal
 from enum import Enum
 
-import tomli
+import nestedtext
 from gi.repository import Gio, GLib, Gtk, GtkLayerShell
 
 from cinnabar.plugin import WidgetPlugin
@@ -86,8 +86,10 @@ class Application(Gtk.Application):
         if "position" in options:
             self.config.position = BarPosition.from_str(options["position"])
         if "config" in options:
-            with open(options["config"], "rb") as f:
-                cfg = tomli.load(f)
+            with open(options["config"], "r") as f:
+                cfg = nestedtext.load(f)
+                if not isinstance(cfg, dict):
+                    raise RuntimeError("Invalid configuration file.")
                 widget_cfg = cfg.get("widgets", {})
                 self._begin_widgets = self.load_widgets(
                     widget_cfg.get("beginning", [])
@@ -104,7 +106,7 @@ class Application(Gtk.Application):
     def load_widgets(self, configs: list[dict]) -> list[WidgetPlugin]:
         widgets: list[WidgetPlugin] = []
         for config in configs:
-            plugin_module_path = "cinnabar.plugins." + config["type"]
+            plugin_module_path = "cinnabar.plugins." + config["widget"]
             module = importlib.import_module(plugin_module_path)
             classes = inspect.getmembers(module, inspect.isclass)
             for (_, c) in classes:
