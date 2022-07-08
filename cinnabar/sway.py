@@ -6,7 +6,7 @@ import subprocess
 import sys
 import threading
 from enum import Enum
-from typing import Callable
+from typing import Any, Callable, Dict, List, Union
 
 
 MAGIC_STR = b"i3-ipc"
@@ -60,8 +60,9 @@ class SwayEvent(Enum):
         return self.name.lower()
 
 
-SwayResHandler = Callable[[SwayMessage, dict], None]
-SwayEventHandler = Callable[[SwayEvent, dict], None]
+SwayResPayload = Union[Dict[str, Any], List[Any]]
+SwayResHandler = Callable[[SwayMessage, SwayResPayload], None]
+SwayEventHandler = Callable[[SwayEvent, SwayResPayload], None]
 SwayMessageQueue = queue.Queue[tuple[SwayMessage, str, SwayResHandler]]
 
 
