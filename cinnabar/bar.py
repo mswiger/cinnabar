@@ -4,7 +4,7 @@ import importlib
 import inspect
 from enum import Enum
 
-from gi.repository import Gdk, Gio, GLib, Gtk, GtkLayerShell
+from gi.repository import Gdk, Gtk, GtkLayerShell
 
 from cinnabar.plugin import WidgetPlugin
 
@@ -40,8 +40,14 @@ class BarPosition(Enum):
 
 
 class Bar:
-    _output: Gdk.Monitor
+    monitor: Gdk.Monitor
+    """Monitor object the bar is attached to."""
+
+    output: str
+    """Name of the output the bar is attached to."""
+
     _position: BarPosition
+    """Which edge of the screen the bar should be anchored to."""
 
     _begin_widgets: list[WidgetPlugin] = []
     _mid_widgets: list[WidgetPlugin] = []
@@ -53,8 +59,16 @@ class Bar:
             return Gtk.Orientation.VERTICAL
         return Gtk.Orientation.HORIZONTAL
 
-    def __init__(self, app: Gtk.Application, config: dict) -> None:
+    def __init__(
+        self,
+        app: Gtk.Application,
+        monitor: Gdk.Monitor,
+        output: str,
+        config: dict,
+    ) -> None:
         self._app = app
+        self.monitor = monitor
+        self.output = output
         self._config = config
 
         self._width = int(config.get("width", 0))
@@ -73,6 +87,10 @@ class Bar:
         )
 
         self._init_window()
+
+    def __del__(self):
+        self._window.hide()
+        self._app.remove_window(self._window)
 
     def _load_widgets(self, configs: list[dict]) -> list[WidgetPlugin]:
         widgets: list[WidgetPlugin] = []
@@ -110,7 +128,8 @@ class Bar:
 
         GtkLayerShell.init_for_window(self._window)
         GtkLayerShell.auto_exclusive_zone_enable(self._window)
-        # TODO: Add output handling
+        GtkLayerShell.set_monitor(self._window, self.monitor)
+        GtkLayerShell.set_namespace(self._window, "cinnabar")
 
         edges = [self._position.to_layer_shell_edge()]
         if self.orientation == Gtk.Orientation.HORIZONTAL and not self._width:
