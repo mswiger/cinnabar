@@ -80,17 +80,16 @@ pycairo = ">=1.16,<2.0"
 
 [[package]]
 name = "pygobject-stubs"
-version = "0.0.9"
+version = "1.0.0"
 description = "Typing stubs for PyGobject"
 category = "dev"
 optional = false
 python-versions = "*"
 
-[package.dependencies]
-PyGObject = "*"
-
 [package.extras]
-dev = ["mypy", "flake8", "flake8-pyi", "setuptools", "wheel"]
+all = ["mypy", "flake8", "flake8-pyi", "pygobject"]
+dev = ["mypy", "flake8", "flake8-pyi"]
+generate = ["pygobject"]
 
 [[package]]
 name = "python-dateutil"
@@ -136,7 +135,7 @@ python-versions = ">=3.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "e315e0e1f3f9232b091957bf16cda14cdc64fa751b3614117c5a646039804a6c"
+content-hash = "488b631b228fd0942d78d2e4713f5f0d640bd7d00f5f673273f20ea373ea232e"
 
 [metadata.files]
 arrow = [
@@ -202,8 +201,8 @@ pygobject = [
     {file = "PyGObject-3.42.1.tar.gz", hash = "sha256:80d6a3ad1630e9d1edf31b9e9fad9a894c57e18545a3c95ef0044ac4042b8620"},
 ]
 pygobject-stubs = [
-    {file = "PyGObject-stubs-0.0.9.tar.gz", hash = "sha256:85ec71876eb491c838cc9a09bfd8302fd40c274479d8a56696c789c65789f46f"},
-    {file = "PyGObject_stubs-0.0.9-py3-none-any.whl", hash = "sha256:cdddf637b0125d04ddf5c813f62e8c87c2e4444445d4264cf577bbd6bd3b7575"},
+    {file = "PyGObject-stubs-1.0.0.tar.gz", hash = "sha256:417f66e864ba05b19f98da34f124545c4d81e4132908603ccdd1aef926a4f947"},
+    {file = "PyGObject_stubs-1.0.0-py3-none-any.whl", hash = "sha256:ac7862fa455376ea394b206db5d4810ff812a6ae7866ccc75948a9460945eeae"},
 ]
 python-dateutil = [
     {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},

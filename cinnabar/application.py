@@ -83,8 +83,6 @@ class Application(Gtk.Application):
             if monitor is not None:
                 self.monitor_added(display, monitor)
 
-        # NOTE: the typings for Gdk.Display are currently missing the
-        # GObject.Object parent class, so type information is missing here.
         display.connect("monitor-added", self.monitor_added)
         display.connect("monitor-removed", self.monitor_removed)
 

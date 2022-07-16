@@ -12,7 +12,7 @@ nestedtext = "^3.4.0"
 
 [tool.poetry.dev-dependencies]
 taskipy = "^1.10.2"
-PyGObject-stubs = "^0.0.9"
+PyGObject-stubs = "^1.0.0"
 
 [tool.pyright]
 venvPath = "."
