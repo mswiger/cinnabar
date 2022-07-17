@@ -6,7 +6,7 @@ import subprocess
 import sys
 import threading
 from enum import Enum
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 
 MAGIC_STR = b"i3-ipc"
@@ -66,12 +66,25 @@ SwayEventHandler = Callable[[SwayEvent, SwayResPayload], None]
 SwayMessageQueue = queue.Queue[tuple[SwayMessage, str, SwayResHandler]]
 
 
+def _do_nothing(*_) -> None:
+    return
+
+
 class SwayClient:
-    _consumer_thread: threading.Thread | None
-    _consumer_stop: threading.Event | None
-    _event_thread: threading.Thread | None
-    _event_stop: threading.Event | None
+    _consumer_thread: Optional[threading.Thread]
+    """Thread that consumes and sends Sway messages from the message queue."""
+
+    _consumer_stop: Optional[threading.Event]
+    """Thread event for stopping the consumer thread."""
+
+    _event_thread: Optional[threading.Thread]
+    """Thread that waits for and handles events from Sway."""
+
+    _event_stop: Optional[threading.Event]
+    """Thread event for stopping the event thread."""
+
     _message_queue: SwayMessageQueue
+    """Queue of messages to be dispatched to Sway."""
 
     def __init__(self) -> None:
         """Initialize the Sway client.
@@ -92,7 +105,7 @@ class SwayClient:
         self,
         msg: SwayMessage,
         payload: str,
-        res_handler: SwayResHandler,
+        res_handler: SwayResHandler = _do_nothing,
     ) -> None:
         """Send a message with the given payload to Sway via the IPC socket.
 
