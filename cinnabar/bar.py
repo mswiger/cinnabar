@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import importlib
 import inspect
+from abc import ABC, abstractmethod
 from enum import Enum
 
 from gi.repository import Gdk, Gtk, GtkLayerShell
-
-from cinnabar.plugin import WidgetPlugin
 
 
 class BarPosition(Enum):
@@ -100,7 +99,7 @@ class Bar:
             classes = inspect.getmembers(module, inspect.isclass)
             for (_, c) in classes:
                 if issubclass(c, WidgetPlugin) and (c is not WidgetPlugin):
-                    widgets.append(c(config))
+                    widgets.append(c(self, config))
         return widgets
 
     def _init_window(self):
@@ -142,3 +141,27 @@ class Bar:
 
         self._window.set_size_request(self._width, self._height)
         self._window.show_all()
+
+
+class WidgetPlugin(ABC):
+    """Plugin that represents a widget that can be added to a bar."""
+
+    @abstractmethod
+    def __init__(self, bar: Bar, config: dict):
+        """Initialize the widget plugin
+
+        Args:
+            bar (Bar): The bar that the WidgetPlugin belongs to.
+            config (dict): The configuration specific to the WidgetPlugin.
+        """
+
+        pass
+
+    @abstractmethod
+    def widget(self) -> Gtk.Widget:
+        """Get the widget to display in the bar.
+
+        Returns:
+            Gtk.Widget: The widget to be displayed in the bar.
+        """
+        pass

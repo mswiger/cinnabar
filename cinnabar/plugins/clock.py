@@ -2,11 +2,11 @@ from datetime import datetime
 
 from gi.repository import GObject, Gtk
 
-from cinnabar.plugin import WidgetPlugin
+from cinnabar.bar import Bar, WidgetPlugin
 
 
 class Clock(WidgetPlugin):
-    def __init__(self, config):
+    def __init__(self, _: Bar, config: dict) -> None:
         self._label = Gtk.Label()
         self._config = config
         self.update_clock()
