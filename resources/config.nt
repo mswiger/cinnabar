@@ -4,13 +4,13 @@ position: top
 widgets:
     beginning:
         -
-            widget: dummy
-        # -
-        #     widget: sway_workspaces
-        #     persistent_workspaces:
-        #         1: [eDP-1]
-        #         2: []
-        #         3: []
+            widget: sway_workspaces
+            # all_outputs: false
+            # persistent_workspaces:
+            #     3:
+            #     8:
+            #         [DP-1]
+            #     test:
     middle:
         -
             widget: clock

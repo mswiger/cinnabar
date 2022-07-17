@@ -1,7 +1,13 @@
-from typing import Callable
+from typing import Any, Callable, Iterable, Optional
 
 from gi.repository import GLib
 
+
+def find(fn: Callable, iterable: Iterable) -> Optional[Any]:
+    for i in iterable:
+        if fn(i):
+            return i
+    return None
 
 def glib_call_in_main(fn: Callable):
     # Wrap callable in a method that returns False to make it be removed from
@@ -15,3 +21,9 @@ def glib_call_in_main(fn: Callable):
         GLib.idle_add(inner, *args, **kwargs)
 
     return wrapper
+
+
+def str_to_bool(string: str) -> bool:
+    if string.lower() == "true":
+        return True
+    return False
