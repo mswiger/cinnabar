@@ -17,6 +17,4 @@ widgets:
             format: {:%Y-%m-%d %H:%M:%S}
     end:
         -
-            widget: dummy
-        -
-            widget: dummy
+            widget: tray
