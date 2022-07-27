@@ -9,6 +9,13 @@ def find(fn: Callable, iterable: Iterable) -> Optional[Any]:
             return i
     return None
 
+
+def find_index(fn: Callable, input_list: list) -> Optional[int]:
+    for i in range(0, len(input_list)):
+        if fn(input_list[i]):
+            return i
+
+
 def glib_call_in_main(fn: Callable):
     # Wrap callable in a method that returns False to make it be removed from
     # event sources after being called by main thread.
