@@ -9,7 +9,7 @@ license = "Apache-2.0"
 python = "^3.10"
 PyGObject = "^3.42.1"
 nestedtext = "^3.4.0"
-sdbus = { git = "https://github.com/python-sdbus/python-sdbus", rev = "2ae39ae" }
+sdbus = "^0.10.1"
 loguru = "^0.6.0"
 
 [tool.poetry.dev-dependencies]
