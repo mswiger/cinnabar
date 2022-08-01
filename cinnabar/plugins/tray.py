@@ -1,4 +1,5 @@
 import asyncio
+import os
 import threading
 
 from gi.repository import Gtk
@@ -14,13 +15,6 @@ from sdbus import (
 )
 
 from cinnabar.bar import Bar, WidgetPlugin
-
-
-class StatusNotifierHost(
-    DbusInterfaceCommonAsync,
-    interface_name="org.kde.StatusNotifierHost",
-):
-    pass
 
 
 class StatusNotifierWatcher(
@@ -99,26 +93,58 @@ class StatusNotifierWatcher(
 
     async def watch(self) -> None:
         async for payload in self._dbus_proxy.name_owner_changed:
-            name, _, new_owner = payload
+            service, _, new_owner = payload
 
             if not new_owner:
                 removed_items = list(filter(
-                    lambda i: i.startswith(name),
+                    lambda i: i.startswith(service),
                     self._items,
                 ))
                 self._items = list(filter(
-                    lambda i: not i.startswith(name),
+                    lambda i: not i.startswith(service),
                     self._items,
                 ))
-                if name in self._hosts:
-                    self._hosts.remove(name)
-                    logger.debug(f"Removed host {name}.")
+                if service in self._hosts:
+                    self._hosts.remove(service)
+                    logger.debug(f"Removed host {service}.")
 
                 for item in removed_items:
                     self.status_notifier_item_unregistered.emit(item)
 
                 if len(removed_items) > 0:
                     logger.debug(f"Removed items: {', '.join(removed_items)}")
+
+
+class StatusNotifierHost(
+    DbusInterfaceCommonAsync,
+    interface_name="org.kde.StatusNotifierHost",
+):
+    def __init__(self) -> None:
+        super().__init__()
+        self._dbus_proxy = FreedesktopDbus.new_proxy(
+            "org.freedesktop.DBus",
+            "/org/freedesktop/DBus",
+        )
+        self._watcher_proxy = StatusNotifierWatcher.new_proxy(
+            "org.kde.StatusNotifierWatcher",
+            "/StatusNotifierWatcher",
+        )
+        self._service_name = f"org.kde.StatusNotifierHost-{os.getpid()}"
+
+    async def register_to_watcher(self) -> None:
+        async for payload in self._dbus_proxy.name_owner_changed:
+            service, old_owner, _ = payload
+
+            if not old_owner and service == "org.kde.StatusNotifierWatcher":
+                await self._watcher_proxy.register_status_notifier_host(
+                    self._service_name
+                )
+
+    async def handle_item_registered(self) -> None:
+        pass
+
+    async def handle_item_unregistered(self) -> None:
+        pass
 
 
 class Tray(WidgetPlugin):
@@ -148,4 +174,3 @@ def watcher_worker() -> None:
 async def watcher_startup(watcher) -> None:
     await request_default_bus_name_async("org.kde.StatusNotifierWatcher")
     watcher.export_to_dbus("/StatusNotifierWatcher")
-    watcher.register_status_notifier_item
