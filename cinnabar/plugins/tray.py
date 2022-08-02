@@ -149,28 +149,31 @@ class StatusNotifierHost(
 
 class Tray(WidgetPlugin):
     def __init__(self, bar: Bar, config: dict) -> None:
-        thread = threading.Thread(target=watcher_worker, daemon=True)
+        self._event_loop = asyncio.new_event_loop()
+        thread = threading.Thread(
+            target=self._run_event_loop,
+            args=(self._event_loop,),
+            daemon=True,
+        )
         thread.start()
+
+        self._watcher_future = asyncio.run_coroutine_threadsafe(
+            self._start_watcher(),
+            self._event_loop,
+        )
+
+    def __del__(self) -> None:
+        self._watcher_future.cancel()
 
     def widget(self) -> Gtk.Widget:
         return Gtk.Box()
 
+    def _run_event_loop(self, event_loop: asyncio.AbstractEventLoop) -> None:
+        asyncio.set_event_loop(event_loop)
+        event_loop.run_forever()
 
-def watcher_worker() -> None:
-    running_tasks = set()
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    watcher = StatusNotifierWatcher()
-    loop.run_until_complete(watcher_startup(watcher))
-
-    watcher_task = loop.create_task(watcher.watch())
-    watcher_task.add_done_callback(lambda t: running_tasks.remove(t))
-    running_tasks.add(watcher_task)
-
-    loop.run_forever()
-
-
-async def watcher_startup(watcher) -> None:
-    await request_default_bus_name_async("org.kde.StatusNotifierWatcher")
-    watcher.export_to_dbus("/StatusNotifierWatcher")
+    async def _start_watcher(self) -> None:
+        self._watcher = StatusNotifierWatcher()
+        await request_default_bus_name_async("org.kde.StatusNotifierWatcher")
+        self._watcher.export_to_dbus("/StatusNotifierWatcher")
+        await self._watcher.watch()
