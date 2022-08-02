@@ -1,6 +1,8 @@
 import asyncio
 import os
 import threading
+from concurrent.futures import Future
+from typing import Coroutine, Set
 
 from gi.repository import Gtk
 from loguru import logger
@@ -13,6 +15,7 @@ from sdbus import (
     get_current_message,
     request_default_bus_name_async,
 )
+
 
 from cinnabar.bar import Bar, WidgetPlugin
 
@@ -28,7 +31,7 @@ class StatusNotifierWatcher(
 
     def __init__(self) -> None:
         super().__init__()
-        self._dbus_proxy = FreedesktopDbus.new_proxy(
+        self._dbus = FreedesktopDbus.new_proxy(
             "org.freedesktop.DBus",
             "/org/freedesktop/DBus",
         )
@@ -36,12 +39,12 @@ class StatusNotifierWatcher(
     @dbus_method_async(input_signature="s", result_signature="")
     async def register_status_notifier_host(self, host: str) -> None:
         if host in self._hosts:
-            logger.debug(f"Host {host} already registered, ignoring.")
+            logger.debug(f"Host {host} already registered to watcher.")
             return
 
         self._hosts.append(host)
         self.status_notifier_host_registered.emit(host)
-        logger.debug(f"Registered new host {host}.")
+        logger.debug(f"Registered new host {host} to watcher.")
 
     @dbus_method_async(input_signature="s", result_signature="")
     async def register_status_notifier_item(
@@ -60,12 +63,12 @@ class StatusNotifierWatcher(
         item = service + path
 
         if item in self._items:
-            logger.debug(f"Item {item} already registred, ignoring.")
+            logger.debug(f"Item {item} already registered to watcher.")
             return
 
         self._items.append(item)
         self.status_notifier_item_registered.emit(item)
-        logger.debug(f"Registered new item {item}.")
+        logger.debug(f"Registered new item {item} to watcher.")
 
     @dbus_property_async(property_signature="as")
     def registered_status_notifier_items(self) -> list[str]:
@@ -92,7 +95,7 @@ class StatusNotifierWatcher(
         raise NotImplementedError
 
     async def watch(self) -> None:
-        async for payload in self._dbus_proxy.name_owner_changed:
+        async for payload in self._dbus.name_owner_changed:
             service, _, new_owner = payload
 
             if not new_owner:
@@ -106,13 +109,11 @@ class StatusNotifierWatcher(
                 ))
                 if service in self._hosts:
                     self._hosts.remove(service)
-                    logger.debug(f"Removed host {service}.")
+                    logger.debug(f"Removed host {service} from watcher.")
 
                 for item in removed_items:
                     self.status_notifier_item_unregistered.emit(item)
-
-                if len(removed_items) > 0:
-                    logger.debug(f"Removed items: {', '.join(removed_items)}")
+                    logger.debug(f"Removed item {item} from watcher.")
 
 
 class StatusNotifierHost(
@@ -121,59 +122,71 @@ class StatusNotifierHost(
 ):
     def __init__(self) -> None:
         super().__init__()
-        self._dbus_proxy = FreedesktopDbus.new_proxy(
+        self._dbus = FreedesktopDbus.new_proxy(
             "org.freedesktop.DBus",
             "/org/freedesktop/DBus",
         )
-        self._watcher_proxy = StatusNotifierWatcher.new_proxy(
+        self._watcher = StatusNotifierWatcher.new_proxy(
             "org.kde.StatusNotifierWatcher",
             "/StatusNotifierWatcher",
         )
         self._service_name = f"org.kde.StatusNotifierHost-{os.getpid()}"
 
-    async def register_to_watcher(self) -> None:
-        async for payload in self._dbus_proxy.name_owner_changed:
+    async def handle_watcher_registration(self) -> None:
+        async for payload in self._dbus.name_owner_changed:
             service, old_owner, _ = payload
 
             if not old_owner and service == "org.kde.StatusNotifierWatcher":
-                await self._watcher_proxy.register_status_notifier_host(
+                await self._watcher.register_status_notifier_host(
                     self._service_name
                 )
 
     async def handle_item_registered(self) -> None:
-        pass
+        async for item in self._watcher.status_notifier_item_registered:
+            logger.debug(f"Registered item {item} to host.")
 
     async def handle_item_unregistered(self) -> None:
-        pass
+        async for item in self._watcher.status_notifier_item_unregistered:
+            logger.debug(f"Removed item {item} from host.")
 
 
 class Tray(WidgetPlugin):
+    _watcher: StatusNotifierWatcher = StatusNotifierWatcher()
+    _host: StatusNotifierHost = StatusNotifierHost()
+    _event_loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
+    _running_tasks: Set[Future] = set()
+
     def __init__(self, bar: Bar, config: dict) -> None:
-        self._event_loop = asyncio.new_event_loop()
-        thread = threading.Thread(
-            target=self._run_event_loop,
+        event_loop_thread = threading.Thread(
+            target=event_loop_worker,
             args=(self._event_loop,),
             daemon=True,
         )
-        thread.start()
+        event_loop_thread.start()
 
-        self._watcher_future = asyncio.run_coroutine_threadsafe(
-            self._start_watcher(),
-            self._event_loop,
-        )
+        self._create_task(self._start_watcher())
+        self._create_task(self._host.handle_watcher_registration())
+        self._create_task(self._host.handle_item_registered())
+        self._create_task(self._host.handle_item_unregistered())
 
     def __del__(self) -> None:
-        self._watcher_future.cancel()
+        for task in self._running_tasks:
+            task.cancel()
 
     def widget(self) -> Gtk.Widget:
         return Gtk.Box()
 
-    def _run_event_loop(self, event_loop: asyncio.AbstractEventLoop) -> None:
-        asyncio.set_event_loop(event_loop)
-        event_loop.run_forever()
+    def _create_task(self, coroutine: Coroutine) -> Future:
+        future = asyncio.run_coroutine_threadsafe(coroutine, self._event_loop)
+        self._running_tasks.add(future)
+        return future
 
     async def _start_watcher(self) -> None:
-        self._watcher = StatusNotifierWatcher()
         await request_default_bus_name_async("org.kde.StatusNotifierWatcher")
         self._watcher.export_to_dbus("/StatusNotifierWatcher")
         await self._watcher.watch()
+
+
+def event_loop_worker(event_loop: asyncio.AbstractEventLoop) -> None:
+    asyncio.set_event_loop(event_loop)
+    event_loop.run_forever()
