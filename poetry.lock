@@ -119,7 +119,7 @@ six = ">=1.5"
 
 [[package]]
 name = "sdbus"
-version = "0.10.1"
+version = "0.10.2.1"
 description = "Modern Python D-Bus library. Based on sd-bus from libsystemd."
 category = "main"
 optional = false
@@ -169,7 +169,7 @@ dev = ["black (>=19.3b0)", "pytest (>=4.6.2)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "efb8c7a97ecd8761b6787d232629e5d1ed24ce1425af8a54ed4ef426b31baf4f"
+content-hash = "cb293e696617dcae748be169acc3e246b2838181a2d4eb9d825325cf2dfb2f32"
 
 [metadata.files]
 arrow = [
@@ -253,9 +253,8 @@ python-dateutil = [
     {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
 ]
 sdbus = [
-    {file = "sdbus-0.10.1-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:493c0e3e1c284391b0396c06315f8af00e09356dce27a96777173fff28beb72f"},
-    {file = "sdbus-0.10.1-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4edd16196c1c1a98fd91696cc0ed6b55286ecd378e02110c069cebb0af9aa4e3"},
-    {file = "sdbus-0.10.1.tar.gz", hash = "sha256:4e7f01489e17eb1283e0374c2d9eb3fb1f04cf060cd2fcc3790339c0ac130563"},
+    {file = "sdbus-0.10.2.1-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:96b585bd0ea9861098ec11bd24686ea80fb6d3cf72bb1b23a8aba3539183318b"},
+    {file = "sdbus-0.10.2.1-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f72bd00b98c61b41f7bab7c9dffca140a2810e606c67c01fb98c4755abd0d8fe"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},

@@ -24,103 +24,103 @@ class StatusNotifierItem(
 
     @dbus_property_async(property_signature="s")
     def category(self) -> str:
-        return ""
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="s")
     def id(self) -> str:
-        return ""
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="s")
     def title(self) -> str:
-        return ""
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="s")
     def status(self) -> str:
-        return ""
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="u")
     def window_id(self) -> int:
-        return 0
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="s")
     def icon_name(self) -> str:
-        return ""
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="a(iiay)")
     def icon_pixmap(self) -> list[SNIPixmap]:
-        return []
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="s")
     def overlay_icon_name(self) -> str:
-        return ""
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="a(iiay)")
     def overlay_icon_pixmap(self) -> list[SNIPixmap]:
-        return []
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="s")
     def attention_icon_name(self) -> str:
-        return ""
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="a(iiay)")
     def attention_icon_pixmap(self) -> list[Tuple[SNIPixmap]]:
-        return []
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="s")
     def attention_movie_name(self) -> str:
-        return ""
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="(sa(iiay)ss)")
     def tool_tip(self) -> Tuple[str, list[SNIPixmap], str, str]:
-        return ("", [], "", "")
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="b")
     def item_is_menu(self) -> bool:
-        return False
+        raise NotImplementedError
 
     @dbus_property_async(property_signature="o")
     def menu(self) -> str:
-        return ""
+        raise NotImplementedError
 
     @dbus_method_async(input_signature="ii", result_signature="")
     async def context_menu(self) -> None:
-        return None
+        raise NotImplementedError
 
     @dbus_method_async(input_signature="ii", result_signature="")
     async def activate(self) -> None:
-        return None
+        raise NotImplementedError
 
     @dbus_method_async(input_signature="ii", result_signature="")
     async def secondary_activate(self) -> None:
-        return None
+        raise NotImplementedError
 
     @dbus_method_async(input_signature="is", result_signature="")
     async def scroll(self) -> None:
-        return None
+        raise NotImplementedError
 
     @dbus_signal_async(signal_signature="")
     async def new_title(self) -> None:
-        return None
+        raise NotImplementedError
 
     @dbus_signal_async(signal_signature="")
     async def new_icon(self) -> None:
-        return None
+        raise NotImplementedError
 
     @dbus_signal_async(signal_signature="")
     async def new_attention_icon(self) -> None:
-        return None
+        raise NotImplementedError
 
     @dbus_signal_async(signal_signature="")
     async def new_overlay_icon(self) -> None:
-        return None
+        raise NotImplementedError
 
     @dbus_signal_async(signal_signature="")
     async def new_tool_tip(self) -> None:
-        return None
+        raise NotImplementedError
 
     @dbus_signal_async(signal_signature="")
     async def new_status(self) -> None:
-        return None
+        raise NotImplementedError
 
 
 class StatusNotifierWatcher(
@@ -235,7 +235,7 @@ class StatusNotifierHost(
         )
         self._service_name = f"org.kde.StatusNotifierHost-{os.getpid()}"
 
-    async def handle_watcher_registration(self) -> None:
+    async def watch(self) -> None:
         async for payload in self._dbus.name_owner_changed:
             service, old_owner, _ = payload
 
@@ -244,10 +244,9 @@ class StatusNotifierHost(
                     self._service_name
                 )
 
-    async def handle_item_registered(self) -> None:
-        async for item in self._watcher.status_notifier_item_registered:
-            logger.debug(f"Registered item {item} to host.")
 
-    async def handle_item_unregistered(self) -> None:
-        async for item in self._watcher.status_notifier_item_unregistered:
-            logger.debug(f"Removed item {item} from host.")
+def parse_item_str(item: str) -> Tuple[str, str]:
+    sep_idx = item.index("/")
+    service = item[0:sep_idx]
+    path = item[sep_idx:]
+    return (service, path)
