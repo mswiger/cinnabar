@@ -49,6 +49,7 @@ class Tray(WidgetPlugin):
             exception = future.exception()
             if exception:
                 raise exception
+            self._running_tasks.remove(future)
 
         future = asyncio.run_coroutine_threadsafe(coroutine, self._event_loop)
         future.add_done_callback(done)
