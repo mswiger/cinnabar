@@ -1,7 +1,7 @@
 import asyncio
 import threading
 from concurrent.futures import Future
-from typing import Coroutine, Set
+from typing import Coroutine
 
 from gi.repository import Gdk, Gtk
 from loguru import logger
@@ -14,37 +14,26 @@ from cinnabar.plugins.tray.sni import (
     StatusNotifierWatcher,
     parse_item_str,
 )
+from cinnabar.util import glib_call_in_main
 
 
-class Tray(WidgetPlugin):
-    _watcher: StatusNotifierWatcher = StatusNotifierWatcher()
-    _watcher_proxy: StatusNotifierWatcher
-    _host: StatusNotifierHost = StatusNotifierHost()
+class AsyncTaskManager:
     _event_loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
-    _running_tasks: Set[Future] = set()
+    _running_tasks: set[Future] = set()
 
-    def __init__(self, bar: Bar, config: dict) -> None:
+    def __init__(self) -> None:
         event_loop_thread = threading.Thread(
-            target=event_loop_worker,
+            target=self._event_loop_worker,
             args=(self._event_loop,),
             daemon=True,
         )
         event_loop_thread.start()
 
-        self._bar = bar
-        self._create_task(self._start_watcher())
-        self._create_task(self._host.watch())
-
-        self._box = Gtk.Box()
-
     def __del__(self) -> None:
         for task in self._running_tasks:
             task.cancel()
 
-    def widget(self) -> Gtk.Widget:
-        return self._box
-
-    def _create_task(self, coroutine: Coroutine) -> Future:
+    def run(self, coroutine: Coroutine) -> Future:
         def done(future: Future) -> None:
             exception = future.exception()
             if exception:
@@ -56,45 +45,56 @@ class Tray(WidgetPlugin):
         self._running_tasks.add(future)
         return future
 
-    async def _start_watcher(self) -> None:
-        await request_default_bus_name_async("org.kde.StatusNotifierWatcher")
-        self._watcher.export_to_dbus("/StatusNotifierWatcher")
+    def _event_loop_worker(self, loop: asyncio.AbstractEventLoop) -> None:
+        asyncio.set_event_loop(loop)
+        loop.run_forever()
 
-        self._watcher_proxy = StatusNotifierWatcher.new_proxy(
-            "org.kde.StatusNotifierWatcher",
-            "/StatusNotifierWatcher",
-        )
 
-        self._create_task(self._handle_item_registered())
-        self._create_task(self._handle_item_unregistered())
+class Item:
+    _task_manager: AsyncTaskManager
 
-    async def _handle_item_registered(self) -> None:
-        async for i in self._watcher_proxy.status_notifier_item_registered:
-            logger.debug(f"Registered item {i} to host.")
-            service, path = parse_item_str(i)
-            # NOTE: Will either have icon name or icon pixmap
-            item_proxy = StatusNotifierItem.new_proxy(service, path)
-            properties = await item_proxy.properties_get_all_dict(
-                on_unknown_member="ignore"
-            )
+    _item_proxy: StatusNotifierItem
 
-            self._add_item(properties)
+    _tray_box: Gtk.Box
+    _button: Gtk.Button
+    _menu: Gtk.Menu
 
-    def _add_item(self, properties: dict) -> None:
-        button = Gtk.Button(
+    # TODO: are these glib_call_in_main decorations necessary?
+    @glib_call_in_main
+    def __init__(
+        self,
+        task_manager: AsyncTaskManager,
+        service: str,
+        path: str,
+        tray_box: Gtk.Box,
+    ):
+        self._task_manager = task_manager
+        self._item_proxy = StatusNotifierItem.new_proxy(service, path)
+        self._tray_box = tray_box
+
+        self._button = Gtk.Button(
             label="",
             relief=Gtk.ReliefStyle.NONE,
             always_show_image=True,
             visible=True,
         )
+        self._tray_box.add(self._button)
 
-        # Create the image after space for the button has been allocated so
-        # the image size matches the size of the inside of the button.
+        self._task_manager.run(self._load_properties())
+
+    async def _load_properties(self):
+        properties = await self._item_proxy.properties_get_all_dict(
+            on_unknown_member="ignore"
+        )
+
+        self._load_icon(properties.get("icon_name"))
+
+    @glib_call_in_main
+    def _load_icon(self, icon_name):
         def on_size_allocate(button: Gtk.Button, _) -> None:
-            window = self._box.get_window()
+            window = self._tray_box.get_window()
             scale = window.get_scale_factor() if window is not None else 1
             icon_size = button.get_children()[0].get_allocated_height()
-            icon_name = properties.get("icon_name")
 
             if icon_name:
                 icon_theme = Gtk.IconTheme.get_default()
@@ -109,20 +109,50 @@ class Tray(WidgetPlugin):
                     surface = Gdk.cairo_surface_create_from_pixbuf(
                         icon_pixbuf,
                         0,
-                        self._box.get_window(),
+                        self._tray_box.get_window(),
                     )
                     button.set_image(Gtk.Image.new_from_surface(surface))
                     button.disconnect(handler_id)
             # TODO: Add case for handling pixmap directly (no icon name set)
 
-        handler_id = button.connect("size_allocate", on_size_allocate)
-        self._box.add(button)
+        handler_id = self._button.connect("size_allocate", on_size_allocate)
+
+
+class Tray(WidgetPlugin):
+    _watcher: StatusNotifierWatcher = StatusNotifierWatcher()
+    _watcher_proxy: StatusNotifierWatcher
+    _host: StatusNotifierHost = StatusNotifierHost()
+    _task_manager: AsyncTaskManager = AsyncTaskManager()
+    _items: dict = dict()
+
+    def __init__(self, bar: Bar, config: dict) -> None:
+        self._bar = bar
+        self._task_manager.run(self._start_watcher())
+        self._task_manager.run(self._host.watch())
+
+        self._box = Gtk.Box()
+
+    def widget(self) -> Gtk.Widget:
+        return self._box
+
+    async def _start_watcher(self) -> None:
+        await request_default_bus_name_async("org.kde.StatusNotifierWatcher")
+        self._watcher.export_to_dbus("/StatusNotifierWatcher")
+
+        self._watcher_proxy = StatusNotifierWatcher.new_proxy(
+            "org.kde.StatusNotifierWatcher",
+            "/StatusNotifierWatcher",
+        )
+
+        self._task_manager.run(self._handle_item_registered())
+        self._task_manager.run(self._handle_item_unregistered())
+
+    async def _handle_item_registered(self) -> None:
+        async for i in self._watcher_proxy.status_notifier_item_registered:
+            logger.debug(f"Registered item {i} to host.")
+            service, path = parse_item_str(i)
+            self._items[i] = Item(self._task_manager, service, path, self._box)
 
     async def _handle_item_unregistered(self) -> None:
         async for itm in self._watcher_proxy.status_notifier_item_unregistered:
             logger.debug(f"Removed item {itm} from host.")
-
-
-def event_loop_worker(event_loop: asyncio.AbstractEventLoop) -> None:
-    asyncio.set_event_loop(event_loop)
-    event_loop.run_forever()
