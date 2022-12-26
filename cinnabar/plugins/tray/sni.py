@@ -1,5 +1,4 @@
 import os
-from typing import Tuple
 
 from loguru import logger
 from sdbus_async.dbus_daemon import FreedesktopDbus
@@ -12,7 +11,7 @@ from sdbus import (
 )
 
 
-SNIPixmap = Tuple[int, int, bytes]
+SNIPixmap = tuple[int, int, bytes]
 
 
 class StatusNotifierItem(
@@ -63,7 +62,7 @@ class StatusNotifierItem(
         raise NotImplementedError
 
     @dbus_property_async(property_signature="a(iiay)")
-    def attention_icon_pixmap(self) -> list[Tuple[SNIPixmap]]:
+    def attention_icon_pixmap(self) -> list[tuple[SNIPixmap]]:
         raise NotImplementedError
 
     @dbus_property_async(property_signature="s")
@@ -71,7 +70,7 @@ class StatusNotifierItem(
         raise NotImplementedError
 
     @dbus_property_async(property_signature="(sa(iiay)ss)")
-    def tool_tip(self) -> Tuple[str, list[SNIPixmap], str, str]:
+    def tool_tip(self) -> tuple[str, list[SNIPixmap], str, str]:
         raise NotImplementedError
 
     @dbus_property_async(property_signature="b")
@@ -245,7 +244,7 @@ class StatusNotifierHost(
                 )
 
 
-def parse_item_str(item: str) -> Tuple[str, str]:
+def parse_item_str(item: str) -> tuple[str, str]:
     sep_idx = item.index("/")
     service = item[0:sep_idx]
     path = item[sep_idx:]
