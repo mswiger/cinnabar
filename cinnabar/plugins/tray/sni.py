@@ -50,6 +50,10 @@ class StatusNotifierItem(
         raise NotImplementedError
 
     @dbus_property_async(property_signature="s")
+    def icon_theme_path(self) -> str:
+        raise NotImplementedError
+
+    @dbus_property_async(property_signature="s")
     def overlay_icon_name(self) -> str:
         raise NotImplementedError
 

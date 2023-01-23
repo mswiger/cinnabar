@@ -18,3 +18,4 @@ widgets:
     end:
         -
             widget: tray
+            icon_size: 24

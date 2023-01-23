@@ -57,7 +57,11 @@ class Item:
 
     _tray_box: Gtk.Box
     _button: Gtk.Button
+    _icon_theme: Gtk.IconTheme = Gtk.IconTheme()
     _menu: Gtk.Menu
+
+    _service: str
+    _path: str
 
     # TODO: are these glib_call_in_main decorations necessary?
     @glib_call_in_main
@@ -66,11 +70,16 @@ class Item:
         task_manager: AsyncTaskManager,
         service: str,
         path: str,
+        icon_size: int,
         tray_box: Gtk.Box,
     ):
         self._task_manager = task_manager
         self._item_proxy = StatusNotifierItem.new_proxy(service, path)
+        self._icon_size = icon_size
         self._tray_box = tray_box
+
+        self._service = service
+        self._path = path
 
         self._button = Gtk.Button(
             label="",
@@ -78,7 +87,6 @@ class Item:
             always_show_image=True,
             visible=True,
         )
-        self._tray_box.add(self._button)
 
         self._task_manager.run(self._load_properties())
 
@@ -87,18 +95,36 @@ class Item:
             on_unknown_member="ignore"
         )
 
-        self._load_icon(properties.get("icon_name"))
+        icon_theme_path = properties.get("icon_theme_path")
+        icon_name = properties.get("icon_name", "image-missing")
+        self._load_icon(icon_theme_path, icon_name)
 
     @glib_call_in_main
-    def _load_icon(self, icon_name):
+    def _load_icon(self, icon_theme_path: str | None, icon_name: str):
+        paths = []
+        if icon_theme_path:
+            paths += [icon_theme_path]
+        paths += Gtk.IconTheme.get_default().get_search_path()
+
+        self._icon_theme.set_search_path(paths)
+        self._icon_theme.rescan_if_needed()
+
         def on_size_allocate(button: Gtk.Button, _) -> None:
             window = self._tray_box.get_window()
             scale = window.get_scale_factor() if window is not None else 1
-            icon_size = button.get_children()[0].get_allocated_height()
+
+            # Use the height of the button for the icon if the configured icon
+            # size "scalable," else use the configured icon size.
+            btn_height = button.get_children()[0].get_allocated_height()
+            icon_size = btn_height if self._icon_size < 1 else self._icon_size
+
+            sizes = self._icon_theme.get_icon_sizes(icon_name)
+            if len(sizes) > 0 and sizes.count(icon_size) == 0:
+                sizes.sort(reverse=True)
+                icon_size = sizes[0]
 
             if icon_name:
-                icon_theme = Gtk.IconTheme.get_default()
-                icon_pixbuf = icon_theme.load_icon_for_scale(
+                icon_pixbuf = self._icon_theme.load_icon_for_scale(
                     icon_name,
                     icon_size,
                     scale,
@@ -116,6 +142,7 @@ class Item:
             # TODO: Add case for handling pixmap directly (no icon name set)
 
         handler_id = self._button.connect("size_allocate", on_size_allocate)
+        self._tray_box.add(self._button)
 
 
 class Tray(WidgetPlugin):
@@ -127,6 +154,7 @@ class Tray(WidgetPlugin):
 
     def __init__(self, bar: Bar, config: dict) -> None:
         self._bar = bar
+        self._config = config
         self._task_manager.run(self._start_watcher())
         self._task_manager.run(self._host.watch())
 
@@ -151,8 +179,23 @@ class Tray(WidgetPlugin):
         async for i in self._watcher_proxy.status_notifier_item_registered:
             logger.debug(f"Registered item {i} to host.")
             service, path = parse_item_str(i)
-            self._items[i] = Item(self._task_manager, service, path, self._box)
+            self._items[i] = Item(
+                self._task_manager,
+                service,
+                path,
+                self.icon_size,
+                self._box
+            )
 
     async def _handle_item_unregistered(self) -> None:
         async for itm in self._watcher_proxy.status_notifier_item_unregistered:
             logger.debug(f"Removed item {itm} from host.")
+
+    @property
+    def icon_size(self):
+        configured_size = int(self._config.get("icon_size", 24))
+
+        if configured_size < 1:
+            configured_size = 0
+
+        return configured_size
